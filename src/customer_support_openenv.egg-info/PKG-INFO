@@ -1,0 +1,121 @@
+Metadata-Version: 2.4
+Name: customer-support-openenv
+Version: 0.1.0
+Summary: OpenEnv-compatible customer support triage environment
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115
+Requires-Dist: uvicorn[standard]>=0.30
+Requires-Dist: pydantic>=2.7
+Requires-Dist: openai>=1.40.0
+Requires-Dist: httpx>=0.27
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
+
+# Customer Support OpenEnv
+
+A real-world OpenEnv environment for support operations. It simulates common work humans actually do: ticket triage, customer-response drafting, and multi-ticket escalation planning.
+
+## Why this environment exists
+
+Support teams spend a lot of time classifying incoming tickets, choosing the right queue, drafting replies that are accurate and polite, and deciding what to escalate. That makes this a useful benchmark for agentic systems because the task is practical, multi-step, and easy to score programmatically.
+
+## Interface
+
+### Action model
+
+`SupportAction` contains a list of `TicketPlan` items plus a `finalize` flag.
+
+A `TicketPlan` may include:
+- `ticket_id`
+- `category`
+- `priority`
+- `owner_team`
+- `reply`
+- `escalate`
+- `eta_hours`
+- `status`
+
+### Observation model
+
+`SupportObservation` returns:
+- current task description
+- ticket summaries
+- remaining steps
+- best score so far
+- feedback from the latest action
+
+### State model
+
+`SupportState` tracks:
+- episode id
+- task id
+- step count
+- max steps
+- best score
+- latest score
+- task progress
+- terminal status
+
+## Tasks
+
+### Easy: login triage
+A single login-access ticket must be categorized, prioritized, and routed correctly.
+
+### Medium: refund response drafting
+A customer reply must include an apology, a clear next step, and policy-safe wording.
+
+### Hard: multi-ticket queue planning
+Three tickets must be ordered, assigned to the right teams, and answered with sensible escalation decisions.
+
+## Reward design
+
+Rewards are normalized to `0.0–1.0`.
+The environment gives partial credit for correct components and only awards additional reward when the agent improves on its previous best score.
+
+This makes the trajectory informative instead of just sparse pass/fail scoring.
+
+## Setup
+
+```bash
+pip install -e .
+pytest -q
+uvicorn customer_support_env.server:app --reload
+```
+
+## HTTP endpoints
+
+- `GET /health`
+- `POST /reset`
+- `POST /step`
+- `GET /state`
+- `WS /ws`
+
+## Docker
+
+```bash
+docker build -t customer-support-openenv .
+docker run -p 8000:8000 customer-support-openenv
+```
+
+## Baselines
+
+Run the OpenAI-backed baseline:
+
+```bash
+export OPENAI_API_KEY=...
+python scripts/baseline_openai.py
+```
+
+Run the deterministic local fallback:
+
+```bash
+python scripts/baseline_rule.py
+```
+
+## Notes
+
+- The tasks are deterministic.
+- The grading logic is deterministic.
+- The environment is designed to be easy to deploy as a Hugging Face Space.
