@@ -29,7 +29,7 @@ class ResetRequest(BaseModel):
 
 class StepRequest(BaseModel):
     session_id: str = Field(default="default", min_length=1)
-    action: SupportAction
+    action: Optional[SupportAction] = None
 
 
 class StateRequest(BaseModel):
@@ -49,13 +49,16 @@ def reset(req: Optional[ResetRequest] = None) -> SupportObservation:
 
 
 @app.post("/step", response_model=StepResult)
-def step(req: StepRequest) -> StepResult:
+def step(req: Optional[StepRequest] = None) -> StepResult:
+    req = req or StepRequest()
     env = _get_or_create_env(req.session_id)
-    return env.step(req.action)
+    action = req.action or SupportAction(task_id=env.state().task_id, step_type="respond", plans=[], finalize=False)
+    return env.step(action)
 
 
 @app.post("/state", response_model=SupportState)
-def state(req: StateRequest) -> SupportState:
+def state(req: Optional[StateRequest] = None) -> SupportState:
+    req = req or StateRequest()
     env = _get_or_create_env(req.session_id)
     return env.state()
 

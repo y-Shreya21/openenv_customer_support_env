@@ -19,3 +19,17 @@ def test_state_get_returns_current_state():
     assert response.status_code == 200
     payload = response.json()
     assert payload["episode_id"]
+
+
+def test_state_post_allows_empty_body():
+    client.post("/reset")
+    response = client.post("/state")
+    assert response.status_code == 200
+
+
+def test_step_post_allows_empty_body():
+    client.post("/reset")
+    response = client.post("/step")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "observation" in payload
