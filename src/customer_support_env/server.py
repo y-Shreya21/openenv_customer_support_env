@@ -22,18 +22,18 @@ def _get_or_create_env(session_id: str) -> CustomerSupportEnv:
 
 
 class ResetRequest(BaseModel):
-    session_id: str = Field(..., min_length=1)
+    session_id: str = Field(default="default", min_length=1)
     task_id: Optional[TaskId] = None
     seed: Optional[int] = None
 
 
 class StepRequest(BaseModel):
-    session_id: str = Field(..., min_length=1)
+    session_id: str = Field(default="default", min_length=1)
     action: SupportAction
 
 
 class StateRequest(BaseModel):
-    session_id: str = Field(..., min_length=1)
+    session_id: str = Field(default="default", min_length=1)
 
 
 @app.get("/health")
@@ -42,7 +42,8 @@ def health() -> dict:
 
 
 @app.post("/reset", response_model=SupportObservation)
-def reset(req: ResetRequest) -> SupportObservation:
+def reset(req: Optional[ResetRequest] = None) -> SupportObservation:
+    req = req or ResetRequest()
     env = _get_or_create_env(req.session_id)
     return env.reset(task_id=req.task_id, seed=req.seed)
 
@@ -56,6 +57,12 @@ def step(req: StepRequest) -> StepResult:
 @app.post("/state", response_model=SupportState)
 def state(req: StateRequest) -> SupportState:
     env = _get_or_create_env(req.session_id)
+    return env.state()
+
+
+@app.get("/state", response_model=SupportState)
+def state_get(session_id: str = "default") -> SupportState:
+    env = _get_or_create_env(session_id)
     return env.state()
 
 
