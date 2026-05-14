@@ -22,18 +22,18 @@ def _get_or_create_env(session_id: str) -> CustomerSupportEnv:
 
 
 class ResetRequest(BaseModel):
-    session_id: str = Field(..., min_length=1)
+    session_id: str = Field(default="default", min_length=1)
     task_id: Optional[TaskId] = None
     seed: Optional[int] = None
 
 
 class StepRequest(BaseModel):
-    session_id: str = Field(..., min_length=1)
-    action: SupportAction
+    session_id: str = Field(default="default", min_length=1)
+    action: Optional[SupportAction] = None
 
 
 class StateRequest(BaseModel):
-    session_id: str = Field(..., min_length=1)
+    session_id: str = Field(default="default", min_length=1)
 
 
 @app.get("/health")
@@ -42,20 +42,30 @@ def health() -> dict:
 
 
 @app.post("/reset", response_model=SupportObservation)
-def reset(req: ResetRequest) -> SupportObservation:
+def reset(req: Optional[ResetRequest] = None) -> SupportObservation:
+    req = req or ResetRequest()
     env = _get_or_create_env(req.session_id)
     return env.reset(task_id=req.task_id, seed=req.seed)
 
 
 @app.post("/step", response_model=StepResult)
-def step(req: StepRequest) -> StepResult:
+def step(req: Optional[StepRequest] = None) -> StepResult:
+    req = req or StepRequest()
     env = _get_or_create_env(req.session_id)
-    return env.step(req.action)
+    action = req.action or SupportAction(task_id=env.state().task_id, step_type="respond", plans=[], finalize=False)
+    return env.step(action)
 
 
 @app.post("/state", response_model=SupportState)
-def state(req: StateRequest) -> SupportState:
+def state(req: Optional[StateRequest] = None) -> SupportState:
+    req = req or StateRequest()
     env = _get_or_create_env(req.session_id)
+    return env.state()
+
+
+@app.get("/state", response_model=SupportState)
+def state_get(session_id: str = "default") -> SupportState:
+    env = _get_or_create_env(session_id)
     return env.state()
 
 
